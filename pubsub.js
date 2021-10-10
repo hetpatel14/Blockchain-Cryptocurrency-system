@@ -9,15 +9,17 @@ const credentials = {
     };
 
 const CHANNELS = {
-    TEST: 'TEST'
+    TEST: 'TEST',
+    BLOCKCHAIN: 'BLOCKCHAIN'
 };
 
 class PubSub{
-    constructor(){
+    constructor({blockchain}){
+        this.blockchain = blockchain;
+
         this.pubnub = new PubNub(credentials);
 
         this.pubnub.subscribe({ channels: [Object.values(CHANNELS)] });  // subscribes to the channel/s
-
         this.pubnub.addListener(this.listener());
     }
 
@@ -32,7 +34,28 @@ class PubSub{
     }
 
     publish({ channel, message }){
-        this.pubnub.publish({ channel, message })  // publishes the message to a channel
+        this.pubnub.unsubscribe(channel, () => {
+            this.pubnub.publish({ channel, message }, () => {
+                this.pubnub.subscribe(channel);
+            })  // publishes the message to a channel
+        })
+    }
+
+    handleMessage(channel, message){
+        console.log(`Message received. Channel: ${channel}. Message: ${message}.`);
+
+        const parsedMessaage = JSON.parse(message);
+
+        if(channel === CHANNELS.BLOCKCHAIN){
+            this.blockchain.replaceChain(parsedMessage); 
+        }
+    }
+
+    broadcastChain(){
+        this.publish({
+            channel: CHANNELS.BLOCKCHAIN,
+            message: JSON.stringify(this.blockchain.chain)
+        });
     }
 }
 
